@@ -225,6 +225,51 @@ def display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stock
     ax.set_xlabel('annualised volatility')
     ax.set_ylabel('annualised returns')
     ax.legend(labelspacing=0.8)
+    
+def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc):
+    sdp, rp = portfolio_annualised_performance(curAlloc, mean_returns, cov_matrix)
+    theCurrentAllocation = pd.DataFrame(curAlloc,index=prices.columns,columns=['allocation'])
+    theCurrentAllocation.allocation = [round(i*100,2)for i in theCurrentAllocation.allocation]
+    theCurrentAllocation = theCurrentAllocation.T
+    
+    min_vol = min_variance(mean_returns, cov_matrix)
+    sdp_min, rp_min = portfolio_annualised_performance(min_vol['x'], mean_returns, cov_matrix)
+    min_vol_allocation = pd.DataFrame(min_vol.x,index=prices.columns,columns=['allocation'])
+    min_vol_allocation.allocation = [round(i*100,2)for i in min_vol_allocation.allocation]
+    min_vol_allocation = min_vol_allocation.T
+    
+    an_vol = np.std(returns) * np.sqrt(252)
+    an_rt = mean_returns * 252
+    
+    print "-"*80
+    print "Current Portfolio Allocation\n"
+    print "Annualised Return:", round(rp,2)
+    print "Annualised Volatility:", round(sdp,2)
+    print "\n"
+    print theCurrentAllocation
+    print "-"*80
+    print "Minimum Volatility Portfolio Allocation\n"
+    print "Annualised Return:", round(rp_min,2)
+    print "Annualised Volatility:", round(sdp_min,2)
+    print "\n"
+    print min_vol_allocation
+    
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.scatter(an_vol,an_rt,marker='o',s=200)
+    
+    for i, txt in enumerate(prices.columns):
+        ax.annotate(txt, (an_vol[i],an_rt[i]), xytext=(10,0), textcoords='offset points')
+        
+    ax.scatter(sdp,rp,marker='*',color='r',s=500, label='Current Allocation')
+    ax.scatter(sdp_min,rp_min,marker='*',color='g',s=500, label='Minimum volatility')
+    
+    target = np.linspace(rp_min, 0.34, 50)
+    efficient_portfolios = efficient_frontier(mean_returns, cov_matrix, target)
+    ax.plot([p['fun'] for p in efficient_portfolios], target, linestyle='-.', color='black', label='efficient frontier')
+    ax.set_title('Portfolio Optimization with Individual Stocks')
+    ax.set_xlabel('annualised volatility')
+    ax.set_ylabel('annualised returns')
+    ax.legend(labelspacing=0.8)
 
 if __name__=="__main__":
     #Setting Dates
@@ -265,6 +310,12 @@ if __name__=="__main__":
     num_portfolios = 25000
     risk_free_rate = 0.0252
     num_Stocks = len(symbols)
+    curAlloc = np.array([0.1,
+                         0.25,
+                         0.05,
+                         0.25,
+                         0.15,
+                         0.2])
     
     
     #Simulated EF with Random
@@ -274,4 +325,7 @@ if __name__=="__main__":
 #    display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
     
     #Plot each individual stocks with corresponding values of each stock's annual return and annual risk
-    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
+#    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
+    
+    #Compare Against Current Allocation
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc)
