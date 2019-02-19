@@ -13,13 +13,12 @@ import pandas as pd
 import numpy as np
 import scipy.optimize as sco
 import matplotlib.pyplot as plt
-import seaborn as sns
 from read_CSV import get_data
 
 plt.style.use('fivethirtyeight')
 np.random.seed(777)
 
-def test_split(df, percent=0.8):
+def test_split(df, percent=0.85):
     train = df.ix[0:int(np.round(prices.shape[0]*percent)), :]
     test = df.ix[int(np.round(prices.shape[0]*percent)): , :]
     return train, test
@@ -247,12 +246,6 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     print "Annualised Volatility:", round(sdp,2)
     print "\n"
     print theCurrentAllocation
-    print "-"*80
-    print "Minimum Volatility Portfolio Allocation\n"
-    print "Annualised Return:", round(rp_min,2)
-    print "Annualised Volatility:", round(sdp_min,2)
-    print "\n"
-    print min_vol_allocation
     
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.scatter(an_vol,an_rt,marker='o',s=200)
@@ -274,16 +267,20 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
 if __name__=="__main__":
     #Setting Dates
     sd=dt.datetime(2005,1,1)
-    ed=dt.datetime(2019,2,13)
+    ed=dt.datetime(2019,2,19)
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['PRGFX',
+    symbols = ['VGSTX',
+               'VIGAX',
+               'VEXPX',
                'PRGTX',
-               'PRISX',
+               'PRGFX',
+               'PRHSX',
+               'PRIDX',
                'PRMTX',
                'TRSGX',
-               'VGSTX']
+               'PRDSX']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()
@@ -317,12 +314,28 @@ if __name__=="__main__":
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([0.1,
-                         0.25,
-                         0.05,
-                         0.25,
-                         0.15,
-                         0.2])
+    curAlloc = np.array([0.2724,
+                         0.0,
+                         0.0952,
+                         0.0977,
+                         0.0712,
+                         0.1052,
+                         0.0853,
+                         0.1181,
+                         0.0589,
+                         0.096])
+        
+    #Suggested Alloc
+    Suggested_Alloc = np.array([0.104,
+                         0.09,
+                         0.12,
+                         0.102,
+                         0.102,
+                         0.103,
+                         0.102,
+                         0.101,
+                         0.069,
+                         0.106])
         
     #Getting Max Sharpe Ratio Alloc
     curAlloc_max_sharpe_ratio = max_sharpe_ratio(mean_returns, cov_matrix, risk_free_rate)['x']
@@ -346,5 +359,6 @@ if __name__=="__main__":
     cov_matrix = returns.cov()
     
     display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, "Current Alloc")
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, Suggested_Alloc, "Suggested Alloc")
     display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_max_sharpe_ratio, "Maximum Sharpe Ratio Portfolio Allocation")
     display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_min_variance, "Minimum Volatility Portfolio Allocation")
