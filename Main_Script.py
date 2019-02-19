@@ -19,7 +19,7 @@ from read_CSV import get_data
 plt.style.use('fivethirtyeight')
 np.random.seed(777)
 
-def test_split(df, percent=0.9):
+def test_split(df, percent=0.8):
     train = df.ix[0:int(np.round(prices.shape[0]*percent)), :]
     test = df.ix[int(np.round(prices.shape[0]*percent)): , :]
     return train, test
@@ -226,7 +226,7 @@ def display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stock
     ax.set_ylabel('annualised returns')
     ax.legend(labelspacing=0.8)
     
-def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc):
+def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, portTitle):
     sdp, rp = portfolio_annualised_performance(curAlloc, mean_returns, cov_matrix)
     theCurrentAllocation = pd.DataFrame(curAlloc,index=prices.columns,columns=['allocation'])
     theCurrentAllocation.allocation = [round(i*100,2)for i in theCurrentAllocation.allocation]
@@ -242,7 +242,7 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     an_rt = mean_returns * 252
     
     print "-"*80
-    print "Current Portfolio Allocation\n"
+    print portTitle + "\n"
     print "Annualised Return:", round(rp,2)
     print "Annualised Volatility:", round(sdp,2)
     print "\n"
@@ -260,13 +260,13 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     for i, txt in enumerate(prices.columns):
         ax.annotate(txt, (an_vol[i],an_rt[i]), xytext=(10,0), textcoords='offset points')
         
-    ax.scatter(sdp,rp,marker='*',color='r',s=500, label='Current Allocation')
+    ax.scatter(sdp,rp,marker='*',color='r',s=500, label=portTitle)
     ax.scatter(sdp_min,rp_min,marker='*',color='g',s=500, label='Minimum volatility')
     
     target = np.linspace(rp_min, 0.34, 50)
     efficient_portfolios = efficient_frontier(mean_returns, cov_matrix, target)
     ax.plot([p['fun'] for p in efficient_portfolios], target, linestyle='-.', color='black', label='efficient frontier')
-    ax.set_title('Portfolio Optimization with Individual Stocks')
+    ax.set_title('Portfolio Performance On Test Data')
     ax.set_xlabel('annualised volatility')
     ax.set_ylabel('annualised returns')
     ax.legend(labelspacing=0.8)
@@ -288,6 +288,10 @@ if __name__=="__main__":
     prices = get_data(symbols, dates)
     prices = prices.dropna()
     
+    #Train and Test split
+    pricesTrain, pricesTest = test_split(prices)
+    
+    
 #    #Plotting each stock price
 #    plt.figure(figsize=(14, 7))
 #    for c in prices.columns.values:
@@ -304,18 +308,27 @@ if __name__=="__main__":
 #    plt.ylabel('daily returns')
     
     #Defining Arg values
-    returns = prices.pct_change()
+    #Train Data
+    returns = pricesTrain.pct_change()
     mean_returns = returns.mean()
     cov_matrix = returns.cov()
     num_portfolios = 25000
     risk_free_rate = 0.0252
     num_Stocks = len(symbols)
+    
+    #Current Allocation
     curAlloc = np.array([0.1,
                          0.25,
                          0.05,
                          0.25,
                          0.15,
                          0.2])
+        
+    #Getting Max Sharpe Ratio Alloc
+    curAlloc_max_sharpe_ratio = max_sharpe_ratio(mean_returns, cov_matrix, risk_free_rate)['x']
+    
+    #Getting Min Vol Alloc
+    curAlloc_min_variance = min_variance(mean_returns, cov_matrix)['x']
     
     
     #Simulated EF with Random
@@ -327,5 +340,11 @@ if __name__=="__main__":
     #Plot each individual stocks with corresponding values of each stock's annual return and annual risk
 #    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
     
-    #Compare Against Current Allocation
-    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc)
+    #Compare all of them on test data
+    returns = pricesTest.pct_change()
+    mean_returns = returns.mean()
+    cov_matrix = returns.cov()
+    
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, "Current Alloc")
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_max_sharpe_ratio, "Maximum Sharpe Ratio Portfolio Allocation")
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_min_variance, "Minimum Volatility Portfolio Allocation")
