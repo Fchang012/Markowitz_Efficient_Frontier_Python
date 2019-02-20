@@ -314,16 +314,16 @@ if __name__=="__main__":
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([0.2724,
-                         0.0,
-                         0.0952,
-                         0.0977,
-                         0.0712,
-                         0.1052,
-                         0.0853,
-                         0.1181,
-                         0.0589,
-                         0.096])
+    curAlloc = np.array([0.1045,
+                         0.1034,
+                         0.1205,
+                         0.1019,
+                         0.1024,
+                         0.1031,
+                         0.0990,
+                         0.1065,
+                         0.0634,
+                         0.0953])
         
     #Suggested Alloc
     Suggested_Alloc = np.array([0.104,
