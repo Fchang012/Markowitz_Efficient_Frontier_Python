@@ -133,6 +133,24 @@ def efficient_frontier(mean_returns, cov_matrix, returns_range):
         efficients.append(efficient_return(mean_returns, cov_matrix, ret))
     return efficients
 
+# Portfolio Stats
+def getPortStats(allocs, prices, sv=1):
+    normed = normalize_data(prices)
+    allocation = normed * allocs
+    position_vals = allocation * sv
+    port_val = position_vals.sum(axis=1)
+    period_return = port_val.pct_change(1)
+    period_return = period_return.ix[1:,]
+    
+    cr = (port_val.ix[-1]/port_val.ix[0]) - 1
+    apr = period_return.mean()
+    sdpr = period_return.std()
+    
+    return cr, apr, sdpr, port_val
+
+def normalize_data(df):
+        return df / df.ix[0, :]
+
 def display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks):
     results, _ = random_portfolios(num_portfolios,mean_returns, cov_matrix, risk_free_rate, num_Stocks)
     
@@ -225,7 +243,12 @@ def display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stock
     ax.set_ylabel('annualised returns')
     ax.legend(labelspacing=0.8)
     
-def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, portTitle):
+def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, portTitle, prices):
+    #Getting Cumulative Port Value And Sharpe Ratio
+    cr, apr, sdpr, port_val = getPortStats(curAlloc, prices, sv=10000)
+    
+    sr = neg_sharpe_ratio(curAlloc, mean_returns, cov_matrix, risk_free_rate)
+    
     sdp, rp = portfolio_annualised_performance(curAlloc, mean_returns, cov_matrix)
     theCurrentAllocation = pd.DataFrame(curAlloc,index=prices.columns,columns=['allocation'])
     theCurrentAllocation.allocation = [round(i*100,2)for i in theCurrentAllocation.allocation]
@@ -244,6 +267,10 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     print portTitle + "\n"
     print "Annualised Return:", round(rp,2)
     print "Annualised Volatility:", round(sdp,2)
+    print "Sharpe Ratio:", round(sr,2)
+    print "Cumulative Returns:", round(cr,2)
+    print "Hypothetical Return Of Initial $10,000:", round(port_val.ix[-1],2)
+    
     print "\n"
     print theCurrentAllocation
     
@@ -317,13 +344,13 @@ if __name__=="__main__":
     curAlloc = np.array([0.1045,
                          0.1034,
                          0.1205,
-                         0.1019,
-                         0.1024,
+                         0.0993,
+                         0.0999,
                          0.1031,
                          0.0990,
                          0.1065,
                          0.0634,
-                         0.0953])
+                         0.1005])
         
     #Suggested Alloc
     Suggested_Alloc = np.array([0.104,
@@ -352,13 +379,22 @@ if __name__=="__main__":
     
     #Plot each individual stocks with corresponding values of each stock's annual return and annual risk
 #    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
+
+
+#    #Compare all on train data
+#    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, "Current Alloc", pricesTrain)
+#    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, Suggested_Alloc, "Suggested Alloc", pricesTrain)
+#    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_max_sharpe_ratio, "Maximum Sharpe Ratio Portfolio Allocation", pricesTrain)
+#    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_min_variance, "Minimum Volatility Portfolio Allocation", pricesTrain)
+
+
     
     #Compare all of them on test data
     returns = pricesTest.pct_change()
     mean_returns = returns.mean()
     cov_matrix = returns.cov()
     
-    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, "Current Alloc")
-    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, Suggested_Alloc, "Suggested Alloc")
-    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_max_sharpe_ratio, "Maximum Sharpe Ratio Portfolio Allocation")
-    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_min_variance, "Minimum Volatility Portfolio Allocation")
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc, "Current Alloc", pricesTest)
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, Suggested_Alloc, "Suggested Alloc", pricesTest)
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_max_sharpe_ratio, "Maximum Sharpe Ratio Portfolio Allocation", pricesTest)
+    display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_Stocks, curAlloc_min_variance, "Minimum Volatility Portfolio Allocation", pricesTest)
