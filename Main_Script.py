@@ -293,21 +293,20 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
 
 if __name__=="__main__":
     #Setting Dates
-    sd=dt.datetime(2005,1,1)
-    ed=dt.datetime(2019,2,19)
+    sd=dt.datetime(2018,1,1)
+    ed=dt.datetime(2019,2,25)
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['VGSTX',
-               'VIGAX',
-               'VEXPX',
-               'PRGTX',
-               'PRGFX',
-               'PRHSX',
-               'PRIDX',
-               'PRMTX',
-               'TRSGX',
-               'PRDSX']
+    symbols = ['NON40OJJ4',
+               'NON40OJJ5',
+               'NON40OJJ6',
+               'NON40OJJ8',
+               'NON40OJPF',
+               'NON40OJPG',
+               'NON40OXLT',
+               'OJPH',
+               'OJJ7']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()
@@ -341,28 +340,26 @@ if __name__=="__main__":
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([0.1045,
-                         0.1034,
-                         0.1205,
-                         0.0993,
-                         0.0999,
-                         0.1031,
-                         0.0990,
-                         0.1065,
-                         0.0634,
-                         0.1005])
+    curAlloc = np.array([0.1110,
+                         0.0650,
+                         0.0690,
+                         0.0690,
+                         0.1300,
+                         0.1450,
+                         0.1190,
+                         0.0390,
+                         0.2530])
         
     #Suggested Alloc
-    Suggested_Alloc = np.array([0.104,
-                         0.09,
-                         0.12,
-                         0.102,
-                         0.102,
-                         0.103,
-                         0.102,
-                         0.101,
-                         0.069,
-                         0.106])
+    Suggested_Alloc = np.array([0.1460,
+                         0.1000,
+                         0.0930,
+                         0.0930,
+                         0.1770,
+                         0.1920,
+                         0.1430,
+                         0.0390,
+                         0.0170])
         
     #Getting Max Sharpe Ratio Alloc
     curAlloc_max_sharpe_ratio = max_sharpe_ratio(mean_returns, cov_matrix, risk_free_rate)['x']
