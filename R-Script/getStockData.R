@@ -11,16 +11,16 @@ toCSV <- function(sym, ticker){
 # Stocks
 tickerList <- list()
 
-ticker = c('VGSTX',
-           'VIGAX',
-           'VEXPX',
-           'PRGTX',
-           'PRGFX',
-           'PRHSX',
-           'PRIDX',
-           'PRMTX',
-           'TRSGX',
-           'PRDSX')
+ticker = c('BHF',
+           'COP',
+           'GE',
+           'GSK',
+           'JNJ',
+           'MET',
+           'MRAM',
+           'MSFT',
+           'MU',
+           'SO')
 
 # Get stock info
 for (i in 1:length(ticker)){

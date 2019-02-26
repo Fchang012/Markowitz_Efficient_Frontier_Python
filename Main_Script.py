@@ -18,7 +18,7 @@ from read_CSV import get_data
 plt.style.use('fivethirtyeight')
 np.random.seed(777)
 
-def test_split(df, percent=0.85):
+def test_split(df, percent=0.99):
     train = df.ix[0:int(np.round(prices.shape[0]*percent)), :]
     test = df.ix[int(np.round(prices.shape[0]*percent)): , :]
     return train, test
@@ -293,20 +293,21 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
 
 if __name__=="__main__":
     #Setting Dates
-    sd=dt.datetime(2018,1,1)
+    sd=dt.datetime(2005,1,1)
     ed=dt.datetime(2019,2,25)
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['NON40OJJ4',
-               'NON40OJJ5',
-               'NON40OJJ6',
-               'NON40OJJ8',
-               'NON40OJPF',
-               'NON40OJPG',
-               'NON40OXLT',
-               'OJPH',
-               'OJJ7']
+    symbols = ['BHF',
+               'COP',
+               'GE',
+               'GSK',
+               'JNJ',
+               'MET',
+               'MRAM',
+               'MSFT',
+               'MU',
+               'SO']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()
@@ -340,26 +341,31 @@ if __name__=="__main__":
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([0.1110,
-                         0.0650,
-                         0.0690,
-                         0.0690,
-                         0.1300,
-                         0.1450,
-                         0.1190,
-                         0.0390,
-                         0.2530])
+    curAlloc = np.array([0.0103,
+                         0.0952,
+                         0.0241,
+                         0.1005,
+                         0.1425,
+                         0.1278,
+                         0.0194,
+                         0.2840,
+                         0.0694,
+                         0.1268])
         
-    #Suggested Alloc
-    Suggested_Alloc = np.array([0.1460,
-                         0.1000,
-                         0.0930,
-                         0.0930,
-                         0.1770,
-                         0.1920,
-                         0.1430,
-                         0.0390,
-                         0.0170])
+#    #Suggested Alloc
+#    Suggested_Alloc = np.array([0.1460,
+#                         0.1000,
+#                         0.0930,
+#                         0.0930,
+#                         0.1770,
+#                         0.1920,
+#                         0.1430,
+#                         0.0390,
+#                         0.0170])
+    
+    #Naive Alloc
+    Suggested_Alloc = np.empty(len(symbols), float)
+    Suggested_Alloc.fill(1.0/len(symbols))
         
     #Getting Max Sharpe Ratio Alloc
     curAlloc_max_sharpe_ratio = max_sharpe_ratio(mean_returns, cov_matrix, risk_free_rate)['x']
