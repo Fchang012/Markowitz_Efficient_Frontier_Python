@@ -2,4 +2,4 @@ R-Script/CSV/*
 R-Script/Fidelity/*
 R-Script/Roth_IRA/*
 R-Script/Stocks/*
-./read_CSV.pyc
+read_CSV.pyc
