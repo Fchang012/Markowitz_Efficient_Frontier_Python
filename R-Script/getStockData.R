@@ -12,8 +12,7 @@ toCSV <- function(sym, ticker){
 # Stocks
 tickerList <- list()
 
-ticker = c('VTI',
-           'MSFT')
+ticker = c('VTV' ,'VBK' ,'VIOO' ,'MGK' ,'VTI' ,'VFH' ,'VGT' ,'VOO' ,'VHT' ,'VOT' ,'VNQ' ,'BOTZ' ,'MET' ,'MMM' ,'MSFT' ,'PFE' ,'TSM')
 
 # Get stock info
 for (i in 1:length(ticker)){
