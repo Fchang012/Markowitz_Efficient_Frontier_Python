@@ -59,18 +59,18 @@ def display_simulated_ef_with_random(mean_returns, cov_matrix, num_portfolios, r
     min_vol_allocation.allocation = [round(i*100,2)for i in min_vol_allocation.allocation]
     min_vol_allocation = min_vol_allocation.T
     
-    print "-"*80
-    print "Maximum Sharpe Ratio Portfolio Allocation\n"
-    print "Annualised Return:", round(rp,2)
-    print "Annualised Volatility:", round(sdp,2)
-    print "\n"
-    print max_sharpe_allocation
-    print "-"*80
-    print "Minimum Volatility Portfolio Allocation\n"
-    print "Annualised Return:", round(rp_min,2)
-    print "Annualised Volatility:", round(sdp_min,2)
-    print "\n"
-    print min_vol_allocation
+    print("-"*80)
+    print("Maximum Sharpe Ratio Portfolio Allocation\n")
+    print("Annualised Return:", round(rp,2))
+    print("Annualised Volatility:", round(sdp,2))
+    print("\n")
+    print(max_sharpe_allocation)
+    print("-"*80)
+    print("Minimum Volatility Portfolio Allocation\n")
+    print("Annualised Return:", round(rp_min,2))
+    print("Annualised Volatility:", round(sdp_min,2))
+    print("\n")
+    print(min_vol_allocation)
     
     plt.figure(figsize=(10, 7))
     plt.scatter(results[0,:],results[1,:],c=results[2,:],cmap='YlGnBu', marker='o', s=10, alpha=0.3)
@@ -166,18 +166,18 @@ def display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, 
     min_vol_allocation.allocation = [round(i*100,2)for i in min_vol_allocation.allocation]
     min_vol_allocation = min_vol_allocation.T
     
-    print "-"*80
-    print "Maximum Sharpe Ratio Portfolio Allocation\n"
-    print "Annualised Return:", round(rp,2)
-    print "Annualised Volatility:", round(sdp,2)
-    print "\n"
-    print max_sharpe_allocation
-    print "-"*80
-    print "Minimum Volatility Portfolio Allocation\n"
-    print "Annualised Return:", round(rp_min,2)
-    print "Annualised Volatility:", round(sdp_min,2)
-    print "\n"
-    print min_vol_allocation
+    print("-"*80)
+    print("Maximum Sharpe Ratio Portfolio Allocation\n")
+    print("Annualised Return:", round(rp,2))
+    print("Annualised Volatility:", round(sdp,2))
+    print("\n")
+    print(max_sharpe_allocation)
+    print("-"*80)
+    print("Minimum Volatility Portfolio Allocation\n")
+    print("Annualised Return:", round(rp_min,2))
+    print("Annualised Volatility:", round(sdp_min,2))
+    print("\n")
+    print(min_vol_allocation)
     
     plt.figure(figsize=(10, 7))
     plt.scatter(results[0,:],results[1,:],c=results[2,:],cmap='YlGnBu', marker='o', s=10, alpha=0.3)
@@ -209,23 +209,23 @@ def display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stock
     an_vol = np.std(returns) * np.sqrt(252)
     an_rt = mean_returns * 252
     
-    print "-"*80
-    print "Maximum Sharpe Ratio Portfolio Allocation\n"
-    print "Annualised Return:", round(rp,2)
-    print "Annualised Volatility:", round(sdp,2)
-    print "\n"
-    print max_sharpe_allocation
-    print "-"*80
-    print "Minimum Volatility Portfolio Allocation\n"
-    print "Annualised Return:", round(rp_min,2)
-    print "Annualised Volatility:", round(sdp_min,2)
-    print "\n"
-    print min_vol_allocation
-    print "-"*80
-    print "Individual Stock Returns and Volatility\n"
+    print("-"*80)
+    print("Maximum Sharpe Ratio Portfolio Allocation\n")
+    print("Annualised Return:", round(rp,2))
+    print("Annualised Volatility:", round(sdp,2))
+    print("\n")
+    print(max_sharpe_allocation)
+    print("-"*80)
+    print("Minimum Volatility Portfolio Allocation\n")
+    print("Annualised Return:", round(rp_min,2))
+    print("Annualised Volatility:", round(sdp_min,2))
+    print("\n")
+    print(min_vol_allocation)
+    print("-"*80)
+    print("Individual Stock Returns and Volatility\n")
     for i, txt in enumerate(prices.columns):
-        print txt,":","annuaised return",round(an_rt[i],2),", annualised volatility:",round(an_vol[i],2)
-    print "-"*80
+        print(txt,":","annuaised return",round(an_rt[i],2),", annualised volatility:",round(an_vol[i],2))
+    print("-"*80)
     
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.scatter(an_vol,an_rt,marker='o',s=200)
@@ -263,16 +263,16 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     an_vol = np.std(returns) * np.sqrt(252)
     an_rt = mean_returns * 252
     
-    print "-"*80
-    print portTitle + "\n"
-    print "Annualised Return:", round(rp,2)
-    print "Annualised Volatility:", round(sdp,2)
-    print "Sharpe Ratio:", round(sr,2)
-    print "Cumulative Returns:", round(cr,2)
-    print "Hypothetical Return Of Initial $10,000:", round(port_val.ix[-1],2)
+    print("-"*80)
+    print(portTitle + "\n")
+    print("Annualised Return:", round(rp,2))
+    print("Annualised Volatility:", round(sdp,2))
+    print("Sharpe Ratio:", round(sr,2))
+    print("Cumulative Returns:", round(cr,2))
+    print("Hypothetical Return Of Initial $10,000:", round(port_val.ix[-1],2))
     
-    print "\n"
-    print theCurrentAllocation
+    print("\n")
+    print(theCurrentAllocation)
     
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.scatter(an_vol,an_rt,marker='o',s=200)
@@ -294,12 +294,11 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
 if __name__=="__main__":
     #Setting Dates
     sd=dt.datetime(2005,1,1)
-    ed=dt.datetime(2019,2,25)
+    ed=dt.datetime(2023,7,17)
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['VTI',
-               'MSFT']
+    symbols = ['VTV' ,'VBK' ,'VIOO' ,'MGK' ,'VTI' ,'VFH' ,'VGT' ,'VOO' ,'VHT' ,'VOT' ,'VNQ']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()
