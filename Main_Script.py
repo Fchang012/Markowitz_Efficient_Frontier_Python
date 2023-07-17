@@ -298,16 +298,8 @@ if __name__=="__main__":
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['BHF',
-               'COP',
-               'GE',
-               'GSK',
-               'JNJ',
-               'MET',
-               'MRAM',
-               'MSFT',
-               'MU',
-               'SO']
+    symbols = ['VTI',
+               'MSFT']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()

@@ -1,6 +1,13 @@
 library(quantmod)
 
-setwd("E:\\Shared_Files\\Fchang012\\Markowitz_Efficient_Frontier_Python\\R-Script")
+# Get the file path of the currently running script
+current_script <- sys.frame(1)$ofile
+
+# Get the directory of the current script
+current_directory <- dirname(current_script)
+
+# Set the working directory to the current directory
+setwd(current_directory)
 
 # toCSV Function
 toCSV <- function(sym, ticker){
@@ -11,16 +18,8 @@ toCSV <- function(sym, ticker){
 # Stocks
 tickerList <- list()
 
-ticker = c('BHF',
-           'COP',
-           'GE',
-           'GSK',
-           'JNJ',
-           'MET',
-           'MRAM',
-           'MSFT',
-           'MU',
-           'SO')
+ticker = c('VTI',
+           'MSFT')
 
 # Get stock info
 for (i in 1:length(ticker)){
