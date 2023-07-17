@@ -1,8 +1,11 @@
 version: '3'
 services:
   r-service:
-    build: .
+    # build: .
+    image: r_container_img
     volumes:
       - .:/app
     ports:
       - "80:80"
+    entrypoint: ["Rscript"]
+    command: ["getStockData.R"]

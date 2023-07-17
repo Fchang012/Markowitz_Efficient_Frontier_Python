@@ -1,13 +1,7 @@
 library(quantmod)
 
-# Get the file path of the currently running script
-current_script <- sys.frame(1)$ofile
-
-# Get the directory of the current script
-current_directory <- dirname(current_script)
-
 # Set the working directory to the current directory
-setwd(current_directory)
+setwd('/app')
 
 # toCSV Function
 toCSV <- function(sym, ticker){
