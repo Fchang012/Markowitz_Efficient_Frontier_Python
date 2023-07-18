@@ -19,8 +19,8 @@ plt.style.use('fivethirtyeight')
 np.random.seed(777)
 
 def test_split(df, percent=0.99):
-    train = df.ix[0:int(np.round(prices.shape[0]*percent)), :]
-    test = df.ix[int(np.round(prices.shape[0]*percent)): , :]
+    train = df.iloc[0:int(np.round(prices.shape[0]*percent)), :]
+    test = df.iloc[int(np.round(prices.shape[0]*percent)): , :]
     return train, test
 
 # Annual Performance Calculation
@@ -34,7 +34,7 @@ def portfolio_annualised_performance(weights, mean_returns, cov_matrix):
 def random_portfolios(num_portfolios, mean_returns, cov_matrix, risk_free_rate, num_Stocks):
     results = np.zeros((3,num_portfolios))
     weights_record = []
-    for i in xrange(num_portfolios):
+    for i in range(num_portfolios):
         weights = np.random.random(num_Stocks)
         weights /= np.sum(weights)
         weights_record.append(weights)
@@ -140,16 +140,16 @@ def getPortStats(allocs, prices, sv=1):
     position_vals = allocation * sv
     port_val = position_vals.sum(axis=1)
     period_return = port_val.pct_change(1)
-    period_return = period_return.ix[1:,]
+    period_return = period_return.iloc[1:,]
     
-    cr = (port_val.ix[-1]/port_val.ix[0]) - 1
+    cr = (port_val.iloc[-1]/port_val.iloc[0]) - 1
     apr = period_return.mean()
     sdpr = period_return.std()
     
     return cr, apr, sdpr, port_val
 
 def normalize_data(df):
-        return df / df.ix[0, :]
+        return df / df.iloc[0, :]
 
 def display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks):
     results, _ = random_portfolios(num_portfolios,mean_returns, cov_matrix, risk_free_rate, num_Stocks)
@@ -269,7 +269,7 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     print("Annualised Volatility:", round(sdp,2))
     print("Sharpe Ratio:", round(sr,2))
     print("Cumulative Returns:", round(cr,2))
-    print("Hypothetical Return Of Initial $10,000:", round(port_val.ix[-1],2))
+    print("Hypothetical Return Of Initial $10,000:", round(port_val.iloc[-1],2))
     
     print("\n")
     print(theCurrentAllocation)
@@ -307,20 +307,20 @@ if __name__=="__main__":
     pricesTrain, pricesTest = test_split(prices)
     
     
-#    #Plotting each stock price
-#    plt.figure(figsize=(14, 7))
-#    for c in prices.columns.values:
-#        plt.plot(prices.index, prices[c], lw=3, alpha=0.8,label=c)
-#    plt.legend(loc='upper left', fontsize=12)
-#    plt.ylabel('price in $')
-#    
-#    #Plotting each daily returns
-#    returns = prices.pct_change()
-#    plt.figure(figsize=(14, 7))
-#    for c in returns.columns.values:
-#        plt.plot(returns.index, returns[c], lw=3, alpha=0.8,label=c)
-#    plt.legend(loc='upper right', fontsize=12)
-#    plt.ylabel('daily returns')
+    #Plotting each stock price
+    plt.figure(figsize=(14, 7))
+    for c in prices.columns.values:
+        plt.plot(prices.index, prices[c], lw=3, alpha=0.8,label=c)
+    plt.legend(loc='upper left', fontsize=12)
+    plt.ylabel('price in $')
+   
+    #Plotting each daily returns
+    returns = prices.pct_change()
+    plt.figure(figsize=(14, 7))
+    for c in returns.columns.values:
+        plt.plot(returns.index, returns[c], lw=3, alpha=0.8,label=c)
+    plt.legend(loc='upper right', fontsize=12)
+    plt.ylabel('daily returns')
     
     #Defining Arg values
     #Train Data
@@ -328,20 +328,21 @@ if __name__=="__main__":
     mean_returns = returns.mean()
     cov_matrix = returns.cov()
     num_portfolios = 25000
-    risk_free_rate = 0.0252
+    risk_free_rate = 0.0381
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([0.0103,
-                         0.0952,
-                         0.0241,
-                         0.1005,
-                         0.1425,
-                         0.1278,
-                         0.0194,
-                         0.2840,
-                         0.0694,
-                         0.1268])
+    curAlloc = np.array([1.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0])
         
 #    #Suggested Alloc
 #    Suggested_Alloc = np.array([0.1460,
@@ -366,13 +367,13 @@ if __name__=="__main__":
     
     
     #Simulated EF with Random
-#    display_simulated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
+    display_simulated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
     
     #Calculated Optimized EF
-#    display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
+    display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
     
     #Plot each individual stocks with corresponding values of each stock's annual return and annual risk
-#    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
+    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
 
 
 #    #Compare all on train data
