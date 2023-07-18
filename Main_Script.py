@@ -13,6 +13,8 @@ import pandas as pd
 import numpy as np
 import scipy.optimize as sco
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 from read_CSV import get_data
 
 plt.style.use('fivethirtyeight')
@@ -290,6 +292,7 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
     ax.set_xlabel('annualised volatility')
     ax.set_ylabel('annualised returns')
     ax.legend(labelspacing=0.8)
+    # plt.show()
 
 if __name__=="__main__":
     #Setting Dates
@@ -298,7 +301,17 @@ if __name__=="__main__":
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['VTV' ,'VBK' ,'VIOO' ,'MGK' ,'VTI' ,'VFH' ,'VGT' ,'VOO' ,'VHT' ,'VOT' ,'VNQ']
+    symbols = ['VTV',
+               'VBK',
+               'VIOO',
+               'MGK',
+               'VTI',
+               'VFH',
+               'VGT',
+               'VOO',
+               'VHT',
+               'VOT',
+               'VNQ']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()
@@ -332,11 +345,11 @@ if __name__=="__main__":
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([1.0,
+    curAlloc = np.array([0.0,
                          0.0,
                          0.0,
                          0.0,
-                         0.0,
+                         1.0,
                          0.0,
                          0.0,
                          0.0,
