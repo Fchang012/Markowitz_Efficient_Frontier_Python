@@ -301,17 +301,7 @@ if __name__=="__main__":
     dates = pd.date_range(sd,ed)
     
     #Symbols    
-    symbols = ['VTV',
-               'VBK',
-               'VIOO',
-               'MGK',
-               'VTI',
-               'VFH',
-               'VGT',
-               'VOO',
-               'VHT',
-               'VOT',
-               'VNQ']
+    symbols = ['BOTZ' ,'MET' ,'MMM' ,'MSFT' ,'PFE' ,'TSM']
                
     prices = get_data(symbols, dates)
     prices = prices.dropna()
@@ -345,17 +335,7 @@ if __name__=="__main__":
     num_Stocks = len(symbols)
     
     #Current Allocation
-    curAlloc = np.array([0.0,
-                         0.0,
-                         0.0,
-                         0.0,
-                         1.0,
-                         0.0,
-                         0.0,
-                         0.0,
-                         0.0,
-                         0.0,
-                         0.0])
+    curAlloc = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         
 #    #Suggested Alloc
 #    Suggested_Alloc = np.array([0.1460,
@@ -380,13 +360,13 @@ if __name__=="__main__":
     
     
     #Simulated EF with Random
-    display_simulated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
+    # display_simulated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
     
     #Calculated Optimized EF
-    display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
+    # display_calculated_ef_with_random(mean_returns, cov_matrix, num_portfolios, risk_free_rate, num_Stocks)
     
     #Plot each individual stocks with corresponding values of each stock's annual return and annual risk
-    display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
+    # display_ef_with_selected(mean_returns, cov_matrix, risk_free_rate, num_Stocks)
 
 
 #    #Compare all on train data
