@@ -297,7 +297,7 @@ def display_ef_with_current_alloc(mean_returns, cov_matrix, risk_free_rate, num_
 if __name__=="__main__":
     #Setting Dates
     sd=dt.datetime(2005,1,1)
-    ed=dt.datetime(2023,7,17)
+    ed=dt.datetime.now()
     dates = pd.date_range(sd,ed)
     
     #Symbols    
