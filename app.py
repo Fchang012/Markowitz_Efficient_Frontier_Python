@@ -34,23 +34,24 @@ tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
 st.sidebar.header("2. Your Current Allocation (%)")
 current_weights = {}
 
-# Dynamically generate sliders for input tickers
+# Dynamically generate numeric input boxes for input tickers
 if tickers:
-    default_weight = 100.0 / len(tickers)
+    default_weight = float(100.0 / len(tickers))
     for ticker in tickers:
-        current_weights[ticker] = st.sidebar.slider(
-            f"{ticker} Weight", 
+        current_weights[ticker] = st.sidebar.number_input(
+            f"{ticker} Weight (%)", 
             min_value=0.0, 
             max_value=100.0, 
             value=default_weight,
-            step=0.5
+            step=0.1,
+            format="%.2f"  # Allows typing up to two decimal places
         )
 
 # Check allocation totals
 total_weight = sum(current_weights.values())
-st.sidebar.write(f"**Total Specified:** {total_weight:.1f}%")
+st.sidebar.write(f"**Total Specified:** {total_weight:.2f}%")
 
-if abs(total_weight - 100.0) > 0.1:
+if abs(total_weight - 100.0) > 0.01:
     st.sidebar.warning("⚠️ Weights do not equal 100%. They will be mathematically normalized for accurate comparison.")
 
 # --- MAIN ANALYSIS EXECUTION ---
