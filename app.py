@@ -23,7 +23,7 @@ def load_data(tickers, start, end):
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("1. Asset Selection")
-tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "VTI, VXUS, BND, GLD")
+tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "VTI, VXUS")
 start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2018-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
