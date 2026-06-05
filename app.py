@@ -16,7 +16,7 @@ st.write("Compare your actual portfolio against the efficient frontier locally a
 def load_data(tickers, start, end):
     try:
         # Fetch adjusted close prices
-        data = yf.download(tickers, start=start, end=end)['Adj Close']
+        data = yf.download(tickers, start=start, end=end)['Close']
         return data
     except Exception as e:
         st.error(f"Error fetching data from Yahoo Finance: {e}")
