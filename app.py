@@ -24,7 +24,7 @@ def load_data(tickers, start, end):
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("1. Asset Selection")
-tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "SPY, QQQ, BND, GLD")
+tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "VTI, VXUS")
 start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2018-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
@@ -123,8 +123,8 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             ax.scatter(current_volatility, current_return, marker="X", s=300, c="red", label="YOUR PORTFOLIO", zorder=6)
             
             ax.set_title("Your Allocation vs Optimal Frontiers")
-            ax.xlabel("Annual Volatility (Risk)")
-            ax.ylabel("Expected Annual Return")
+            ax.set_xlabel("Annual Volatility (Risk)")
+            ax.set_ylabel("Expected Annual Return")
             ax.legend(loc="upper left")
             ax.grid(True, linestyle="--", alpha=0.5)
             
