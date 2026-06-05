@@ -15,7 +15,6 @@ st.write("Compare your actual portfolio against the efficient frontier locally a
 @st.cache_data(ttl="1d")
 def load_data(tickers, start, end):
     try:
-        # Fetch adjusted close prices
         data = yf.download(tickers, start=start, end=end)['Close']
         return data
     except Exception as e:
@@ -24,17 +23,15 @@ def load_data(tickers, start, end):
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("1. Asset Selection")
-tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "VTI, VXUS")
+tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "VTI, VXUS, BND, GLD")
 start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2018-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
-# Clean and parse tickers
 tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
 
 st.sidebar.header("2. Your Current Allocation (%)")
 current_weights = {}
 
-# Dynamically generate numeric input boxes for input tickers
 if tickers:
     default_weight = float(100.0 / len(tickers))
     for ticker in tickers:
@@ -44,15 +41,34 @@ if tickers:
             max_value=100.0, 
             value=default_weight,
             step=0.1,
-            format="%.2f"  # Allows typing up to two decimal places
+            format="%.2f"
         )
 
-# Check allocation totals
 total_weight = sum(current_weights.values())
 st.sidebar.write(f"**Total Specified:** {total_weight:.2f}%")
 
 if abs(total_weight - 100.0) > 0.01:
     st.sidebar.warning("⚠️ Weights do not equal 100%. They will be mathematically normalized for accurate comparison.")
+
+# --- NEW: OPTIMIZATION CONSTRAINTS ---
+st.sidebar.header("3. Optimization Constraints")
+min_weight_pct = st.sidebar.number_input(
+    "Min Allocation per Asset (%)", 
+    min_value=0.0, 
+    max_value=100.0, 
+    value=5.0,  # Default to forcing at least 5% in every asset
+    step=1.0,
+    help="Force the optimizer to hold at least this percentage of every asset to ensure diversification."
+)
+
+# Convert percentage to a decimal for the math engine
+min_weight_bound = min_weight_pct / 100.0
+
+# Mathematical Validation: Ensure the constraint is physically possible
+if tickers and (min_weight_bound * len(tickers) > 1.0):
+    st.sidebar.error(f"❌ Impossible Constraint! A minimum of {min_weight_pct}% across {len(tickers)} assets equals {min_weight_pct * len(tickers)}%. It must be 100% or less.")
+    st.stop()
+
 
 # --- MAIN ANALYSIS EXECUTION ---
 if st.sidebar.button("Run Comparison Analysis") and tickers:
@@ -63,15 +79,12 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             st.error("No historical data found. Please check ticker spellings or network configuration.")
             st.stop()
             
-        # Ensure data columns match our ticker tracking order
         actual_tickers = data.columns.tolist()
         
         try:
-            # Calculate mean historical returns and sample covariance matrix
             mu = expected_returns.mean_historical_return(data)
             S = risk_models.sample_cov(data)
 
-            # Map and normalize user weights to a vector summing to 1.0
             user_w_vector = np.array([current_weights[t] for t in actual_tickers])
             if np.sum(user_w_vector) > 0:
                 user_w_vector = user_w_vector / np.sum(user_w_vector)
@@ -79,25 +92,23 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
                 st.error("Total allocation cannot be 0%.")
                 st.stop()
 
-            # Calculate metrics for the user's current portfolio
             risk_free_rate = 0.02 
             current_return = np.dot(user_w_vector, mu)
             current_volatility = np.sqrt(np.dot(user_w_vector.T, np.dot(S, user_w_vector)))
             current_sharpe = (current_return - risk_free_rate) / current_volatility
 
-            # Calculate Max Sharpe Ratio Benchmark
-            ef_max = EfficientFrontier(mu, S)
+            # Apply the weight bounds to the Max Sharpe Optimizer
+            ef_max = EfficientFrontier(mu, S, weight_bounds=(min_weight_bound, 1.0))
             ef_max.max_sharpe(risk_free_rate=risk_free_rate)
             max_s_weights = ef_max.clean_weights()
             max_s_ret, max_s_vol, max_s_sharpe = ef_max.portfolio_performance(risk_free_rate=risk_free_rate)
 
-            # Calculate Minimum Volatility Benchmark
-            ef_min = EfficientFrontier(mu, S)
+            # Apply the weight bounds to the Min Volatility Optimizer
+            ef_min = EfficientFrontier(mu, S, weight_bounds=(min_weight_bound, 1.0))
             ef_min.min_volatility()
             min_v_weights = ef_min.clean_weights()
             min_v_ret, min_v_vol, min_v_sharpe = ef_min.portfolio_performance(risk_free_rate=risk_free_rate)
 
-            # --- DISPLAY DASHBOARD METRICS ---
             m1, m2, m3 = st.columns(3)
             with m1:
                 st.metric("📋 Your Portfolio Sharpe", f"{current_sharpe:.2f}")
@@ -109,20 +120,18 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
                 st.metric("🛡️ Min Volatility Benchmark", f"{min_v_vol:.2%}", f"{current_volatility - min_v_vol:+.2%} Risk Diff", delta_color="inverse")
                 st.caption(f"Return: {min_v_ret:.2%} | Sharpe: {min_v_sharpe:.2f}")
 
-            # --- VISUALIZATION: EFFICIENT FRONTIER ---
             st.subheader("📈 Efficient Frontier Mapping")
             fig, ax = plt.subplots(figsize=(10, 6))
             
-            # Generate the baseline frontier curve
-            ef_plot = EfficientFrontier(mu, S)
+            # Apply the weight bounds to the plotting engine so the curve reflects your constraints
+            ef_plot = EfficientFrontier(mu, S, weight_bounds=(min_weight_bound, 1.0))
             plotting.plot_efficient_frontier(ef_plot, ax=ax, show_assets=True)
             
-            # Plot reference markers
             ax.scatter(max_s_vol, max_s_ret, marker="*", s=250, c="gold", label="Max Sharpe Portfolio", zorder=5)
             ax.scatter(min_v_vol, min_v_ret, marker="D", s=150, c="green", label="Minimum Volatility", zorder=5)
             ax.scatter(current_volatility, current_return, marker="X", s=300, c="red", label="YOUR PORTFOLIO", zorder=6)
             
-            ax.set_title("Your Allocation vs Optimal Frontiers")
+            ax.set_title(f"Your Allocation vs Optimal Frontiers (Min Allocation: {min_weight_pct}%)")
             ax.set_xlabel("Annual Volatility (Risk)")
             ax.set_ylabel("Expected Annual Return")
             ax.legend(loc="upper left")
@@ -130,7 +139,6 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             
             st.pyplot(fig)
 
-            # --- ALLOCATION BREAKDOWN COMPARISON ---
             st.subheader("📊 Target Allocation Adjustments")
             
             comparison_data = {
@@ -144,4 +152,4 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
 
         except Exception as e:
             st.error(f"Mathematical Optimization Error: {e}")
-            st.info("This usually happens if assets are perfectly correlated or if date ranges are too narrow.")
+            st.info("This usually happens if constraints are too strict (e.g., forcing a high minimum weight on perfectly correlated assets). Try lowering your minimum allocation.")
