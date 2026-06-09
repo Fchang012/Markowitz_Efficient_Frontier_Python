@@ -142,4 +142,64 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             ef_target = EfficientFrontier(mu, S, weight_bounds=(min_weight_bound, 1.0))
             try:
                 # Maximize return for a target volatility
-                ef_target
+                ef_target.efficient_risk(target_volatility=target_vol_bound)
+                target_weights = ef_target.clean_weights()
+                target_ret, target_vol_actual, target_sharpe = ef_target.portfolio_performance(risk_free_rate=risk_free_rate)
+            except ValueError:
+                # Catches error if user sets a target volatility lower than the mathematical minimum possible
+                target_ret, target_vol_actual, target_sharpe = 0, 0, 0
+                st.warning(f"⚠️ Target volatility of {target_vol_pct}% is lower than the absolute minimum volatility possible for these assets. Adjusting skipped.")
+
+            # --- METRICS ---
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                st.metric("📋 Your Portfolio Sharpe", f"{current_sharpe:.2f}")
+                st.caption(f"Return: {current_return:.2%} | Volatility: {current_volatility:.2%}")
+            with m2:
+                st.metric("🏆 Max Sharpe Benchmark", f"{max_s_sharpe:.2f}", f"+{max_s_sharpe - current_sharpe:.2f} vs Yours")
+                st.caption(f"Return: {max_s_ret:.2%} | Volatility: {max_s_vol:.2%}")
+            with m3:
+                st.metric("🛡️ Min Volatility Benchmark", f"{min_v_vol:.2%}", f"{current_volatility - min_v_vol:+.2%} Risk Diff", delta_color="inverse")
+                st.caption(f"Return: {min_v_ret:.2%} | Sharpe: {min_v_sharpe:.2f}")
+
+            # --- PLOTTING ---
+            st.subheader("📈 Efficient Frontier Mapping")
+            fig, ax = plt.subplots(figsize=(10, 6))
+            
+            # Apply the weight bounds to the plotting engine so the curve reflects your constraints
+            ef_plot = EfficientFrontier(mu, S, weight_bounds=(min_weight_bound, 1.0))
+            plotting.plot_efficient_frontier(ef_plot, ax=ax, show_assets=True)
+            
+            ax.scatter(max_s_vol, max_s_ret, marker="*", s=250, c="gold", label="Max Sharpe Portfolio", zorder=5)
+            ax.scatter(min_v_vol, min_v_ret, marker="D", s=150, c="green", label="Minimum Volatility", zorder=5)
+            ax.scatter(current_volatility, current_return, marker="X", s=300, c="red", label="YOUR PORTFOLIO", zorder=6)
+            
+            # --- NEW: Plot the Target Risk point if it exists ---
+            if target_ret > 0:
+                ax.scatter(target_vol_actual, target_ret, marker="P", s=200, c="blue", label=f"Max Return for ≤{target_vol_pct}% Risk", zorder=5)
+            
+            ax.set_title(f"Your Allocation vs Optimal Frontiers (Min Allocation: {min_weight_pct}%)")
+            ax.set_xlabel("Annual Volatility (Risk)")
+            ax.set_ylabel("Expected Annual Return")
+            ax.legend(loc="upper left")
+            ax.grid(True, linestyle="--", alpha=0.5)
+            
+            st.pyplot(fig)
+
+            # --- DATA TABLE ---
+            st.subheader("📊 Target Allocation Adjustments")
+            
+            # --- NEW: Include the dynamically named Target Risk column ---
+            comparison_data = {
+                "Your Normalized Allocation": [f"{user_w_vector[i]:.2%}" for i, t in enumerate(actual_tickers)],
+                "Max Sharpe Target": [f"{max_s_weights[t]:.2%}" for t in actual_tickers],
+                "Min Volatility Target": [f"{min_v_weights[t]:.2%}" for t in actual_tickers],
+                f"Max Return at {target_vol_pct}% Risk": [f"{target_weights[t]:.2%}" if target_ret > 0 else "N/A" for t in actual_tickers]
+            }
+            
+            df_compare = pd.DataFrame(comparison_data, index=actual_tickers)
+            st.table(df_compare)
+
+        except Exception as e:
+            st.error(f"Mathematical Optimization Error: {e}")
+            st.info("This usually happens if constraints are too strict (e.g., forcing a high minimum weight on perfectly correlated assets). Try lowering your minimum allocation.")
