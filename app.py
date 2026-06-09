@@ -24,7 +24,7 @@ def load_data(tickers, start, end):
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("1. Asset Selection")
 tickers_input = st.sidebar.text_input("Enter Tickers (comma-separated)", "VTI, VXUS")
-start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2018-01-01"))
+start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2010-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
 tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
@@ -56,7 +56,7 @@ min_weight_pct = st.sidebar.number_input(
     "Min Allocation per Asset (%)", 
     min_value=0.0, 
     max_value=100.0, 
-    value=5.0,  # Default to forcing at least 5% in every asset
+    value=1.0,  # Default to forcing at least 1% in every asset
     step=1.0,
     help="Force the optimizer to hold at least this percentage of every asset to ensure diversification."
 )
