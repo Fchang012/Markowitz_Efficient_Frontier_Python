@@ -50,7 +50,7 @@ st.sidebar.write(f"**Total Specified:** {total_weight:.2f}%")
 if abs(total_weight - 100.0) > 0.01:
     st.sidebar.warning("⚠️ Weights do not equal 100%. They will be mathematically normalized for accurate comparison.")
 
-# --- NEW: OPTIMIZATION CONSTRAINTS ---
+# --- OPTIMIZATION CONSTRAINTS ---
 st.sidebar.header("3. Optimization Constraints")
 min_weight_pct = st.sidebar.number_input(
     "Min Allocation per Asset (%)", 
@@ -69,6 +69,17 @@ if tickers and (min_weight_bound * len(tickers) > 1.0):
     st.sidebar.error(f"❌ Impossible Constraint! A minimum of {min_weight_pct}% across {len(tickers)} assets equals {min_weight_pct * len(tickers)}%. It must be 100% or less.")
     st.stop()
 
+# --- NEW: TARGET RISK INPUT ---
+st.sidebar.header("4. Target Risk Profile")
+target_vol_pct = st.sidebar.number_input(
+    "Max Tolerable Volatility (%)", 
+    min_value=1.0, 
+    max_value=100.0, 
+    value=15.0,  # Example: 15% annual volatility
+    step=1.0,
+    help="Finds the absolute maximum return possible without exceeding this volatility level."
+)
+target_vol_bound = target_vol_pct / 100.0
 
 # --- MAIN ANALYSIS EXECUTION ---
 if st.sidebar.button("Run Comparison Analysis") and tickers:
@@ -109,6 +120,19 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             min_v_weights = ef_min.clean_weights()
             min_v_ret, min_v_vol, min_v_sharpe = ef_min.portfolio_performance(risk_free_rate=risk_free_rate)
 
+            # --- NEW: Apply the weight bounds to the Target Risk Optimizer ---
+            ef_target = EfficientFrontier(mu, S, weight_bounds=(min_weight_bound, 1.0))
+            try:
+                # Maximize return for a target volatility
+                ef_target.efficient_risk(target_volatility=target_vol_bound)
+                target_weights = ef_target.clean_weights()
+                target_ret, target_vol_actual, target_sharpe = ef_target.portfolio_performance(risk_free_rate=risk_free_rate)
+            except ValueError:
+                # Catches error if user sets a target volatility lower than the mathematical minimum possible
+                target_ret, target_vol_actual, target_sharpe = 0, 0, 0
+                st.warning(f"⚠️ Target volatility of {target_vol_pct}% is lower than the absolute minimum volatility possible for these assets. Adjusting skipped.")
+
+            # --- METRICS ---
             m1, m2, m3 = st.columns(3)
             with m1:
                 st.metric("📋 Your Portfolio Sharpe", f"{current_sharpe:.2f}")
@@ -120,6 +144,7 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
                 st.metric("🛡️ Min Volatility Benchmark", f"{min_v_vol:.2%}", f"{current_volatility - min_v_vol:+.2%} Risk Diff", delta_color="inverse")
                 st.caption(f"Return: {min_v_ret:.2%} | Sharpe: {min_v_sharpe:.2f}")
 
+            # --- PLOTTING ---
             st.subheader("📈 Efficient Frontier Mapping")
             fig, ax = plt.subplots(figsize=(10, 6))
             
@@ -131,6 +156,10 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             ax.scatter(min_v_vol, min_v_ret, marker="D", s=150, c="green", label="Minimum Volatility", zorder=5)
             ax.scatter(current_volatility, current_return, marker="X", s=300, c="red", label="YOUR PORTFOLIO", zorder=6)
             
+            # --- NEW: Plot the Target Risk point if it exists ---
+            if target_ret > 0:
+                ax.scatter(target_vol_actual, target_ret, marker="P", s=200, c="blue", label=f"Max Return for ≤{target_vol_pct}% Risk", zorder=5)
+            
             ax.set_title(f"Your Allocation vs Optimal Frontiers (Min Allocation: {min_weight_pct}%)")
             ax.set_xlabel("Annual Volatility (Risk)")
             ax.set_ylabel("Expected Annual Return")
@@ -139,12 +168,15 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
             
             st.pyplot(fig)
 
+            # --- DATA TABLE ---
             st.subheader("📊 Target Allocation Adjustments")
             
+            # --- NEW: Include the dynamically named Target Risk column ---
             comparison_data = {
                 "Your Normalized Allocation": [f"{user_w_vector[i]:.2%}" for i, t in enumerate(actual_tickers)],
                 "Max Sharpe Target": [f"{max_s_weights[t]:.2%}" for t in actual_tickers],
-                "Min Volatility Target": [f"{min_v_weights[t]:.2%}" for t in actual_tickers]
+                "Min Volatility Target": [f"{min_v_weights[t]:.2%}" for t in actual_tickers],
+                f"Max Return at {target_vol_pct}% Risk": [f"{target_weights[t]:.2%}" if target_ret > 0 else "N/A" for t in actual_tickers]
             }
             
             df_compare = pd.DataFrame(comparison_data, index=actual_tickers)
