@@ -103,7 +103,7 @@ if st.sidebar.button("Run Comparison Analysis") and tickers:
                 st.error("Total allocation cannot be 0%.")
                 st.stop()
 
-            risk_free_rate = 0.02 
+            risk_free_rate = 0.0455  # Updated to ~4.55% (10-Year Treasury as of June 2026)
             current_return = np.dot(user_w_vector, mu)
             current_volatility = np.sqrt(np.dot(user_w_vector.T, np.dot(S, user_w_vector)))
             current_sharpe = (current_return - risk_free_rate) / current_volatility
