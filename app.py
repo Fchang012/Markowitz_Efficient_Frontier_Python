@@ -36,44 +36,101 @@ def fetch_current_price(ticker):
     except:
         return None
 
-def analyze_pairings(holdings_with_prices, federal_marginal, ltcg_rate, state_rate, niit_rate):
+def compute_portfolio_tax(holdings, federal_marginal, ltcg_rate, state_rate, niit_rate):
     """
-    holdings_with_prices: list of dicts with keys: ticker, basis, shares, holding, current_price
-    Returns: list of pairing results sorted by savings descending
+    Implements IRS-compliant portfolio-wide netting (Schedule D logic).
+    
+    Args:
+        holdings: list of dicts, each with keys: ticker, basis, shares, holding, current_price
+        federal_marginal: float, marginal tax rate % (e.g. 24.0)
+        ltcg_rate: float, long-term capital gains rate % (e.g. 15.0)
+        state_rate: float, state capital gains rate % (e.g. 0.0)
+        niit_rate: float, NIIT rate % (e.g. 3.8 or 0.0)
+    
+    Returns: dict with all netting waterfall values
     """
-    loss_assets = [h for h in holdings_with_prices if h["current_price"] < h["basis"]]
-    gain_assets = [h for h in holdings_with_prices if h["current_price"] > h["basis"]]
-
-    pairings = []
-    for loss in loss_assets:
-        for gain in gain_assets:
-            realized_loss = (loss["current_price"] - loss["basis"]) * loss["shares"]  # negative
-            realized_gain = (gain["current_price"] - gain["basis"]) * gain["shares"]  # positive
-
-            # Determine federal rate based on gain asset holding period
-            is_long_term = "≥ 1 Year" in gain["holding"]
-            federal_rate = ltcg_rate if is_long_term else federal_marginal
-            combined_rate = (federal_rate + state_rate + niit_rate) / 100.0
-
-            tax_without = max(0.0, realized_gain * combined_rate)
-            net_gain = realized_gain + realized_loss
-            tax_with = max(0.0, net_gain * combined_rate)
-            savings = tax_without - tax_with
-
-            pairings.append({
-                "loss_ticker": loss["ticker"],
-                "gain_ticker": gain["ticker"],
-                "realized_loss": realized_loss,
-                "realized_gain": realized_gain,
-                "net_taxable": max(0, net_gain),
-                "combined_rate": combined_rate,
-                "tax_without": tax_without,
-                "tax_with": tax_with,
-                "savings": savings,
-            })
-
-    pairings.sort(key=lambda x: x["savings"], reverse=True)
-    return pairings, loss_assets, gain_assets
+    st_gains = 0.0
+    st_losses = 0.0
+    lt_gains = 0.0
+    lt_losses = 0.0
+    
+    for h in holdings:
+        pl = (h["current_price"] - h["basis"]) * h["shares"]
+        is_short = "< 1 Year" in h["holding"]
+        if pl >= 0:
+            if is_short:
+                st_gains += pl
+            else:
+                lt_gains += pl
+        else:
+            if is_short:
+                st_losses += pl
+            else:
+                lt_losses += pl
+    
+    net_st = st_gains + st_losses
+    net_lt = lt_gains + lt_losses
+    
+    st_combined_rate = (federal_marginal + state_rate + niit_rate) / 100.0
+    lt_combined_rate = (ltcg_rate + state_rate + niit_rate) / 100.0
+    
+    # Cross-category netting per IRS Schedule D rules
+    if net_st >= 0 and net_lt >= 0:
+        tax_on_st = net_st * st_combined_rate
+        tax_on_lt = net_lt * lt_combined_rate
+        overall_net = net_st + net_lt
+        ordinary_income_deduction = 0.0
+        carryforward = 0.0
+    elif net_st < 0 and net_lt < 0:
+        total_loss = net_st + net_lt
+        tax_on_st = 0.0
+        tax_on_lt = 0.0
+        overall_net = total_loss
+        ordinary_income_deduction = min(abs(total_loss), 3000.0)
+        carryforward = max(0, abs(total_loss) - 3000.0)
+    elif net_st >= 0 and net_lt < 0:
+        cross_netted = net_st + net_lt
+        if cross_netted >= 0:
+            tax_on_st = cross_netted * st_combined_rate
+            tax_on_lt = 0.0
+            ordinary_income_deduction = 0.0
+            carryforward = 0.0
+        else:
+            tax_on_st = 0.0
+            tax_on_lt = 0.0
+            ordinary_income_deduction = min(abs(cross_netted), 3000.0)
+            carryforward = max(0, abs(cross_netted) - 3000.0)
+        overall_net = cross_netted
+    else:  # net_st < 0 and net_lt >= 0
+        cross_netted = net_lt + net_st
+        if cross_netted >= 0:
+            tax_on_st = 0.0
+            tax_on_lt = cross_netted * lt_combined_rate
+            ordinary_income_deduction = 0.0
+            carryforward = 0.0
+        else:
+            tax_on_st = 0.0
+            tax_on_lt = 0.0
+            ordinary_income_deduction = min(abs(cross_netted), 3000.0)
+            carryforward = max(0, abs(cross_netted) - 3000.0)
+        overall_net = cross_netted
+    
+    total_tax = tax_on_st + tax_on_lt
+    ordinary_income_tax_benefit = ordinary_income_deduction * (federal_marginal / 100.0)
+    
+    return {
+        "st_gains": st_gains, "st_losses": st_losses,
+        "lt_gains": lt_gains, "lt_losses": lt_losses,
+        "net_st": net_st, "net_lt": net_lt,
+        "overall_net": overall_net,
+        "tax_on_st": tax_on_st, "tax_on_lt": tax_on_lt,
+        "total_tax": total_tax,
+        "st_combined_rate": st_combined_rate,
+        "lt_combined_rate": lt_combined_rate,
+        "ordinary_income_deduction": ordinary_income_deduction,
+        "ordinary_income_tax_benefit": ordinary_income_tax_benefit,
+        "carryforward": carryforward,
+    }
 
 # Setup Sidebar top level selector
 active_tool = st.sidebar.radio("Active Tool", ["📈 Portfolio Optimizer", "🧾 Tax-Loss Harvesting Simulator"])
@@ -332,14 +389,14 @@ with tab2:
         niit_enabled = st.sidebar.checkbox("Include NIIT (3.8%)", value=False, key="tlh_niit", help="Net Investment Income Tax applies to high earners (>$200k single / >$250k married).")
         niit_rate = 3.8 if niit_enabled else 0.0
 
-        run_tlh = st.sidebar.button("🔍 Analyze All Pairings", key="tlh_run")
+        run_tlh = st.sidebar.button("🔍 Analyze Tax Impact", key="tlh_run")
 
     st.header("🧾 Tax-Loss Harvesting Simulator")
     st.write("Simulate offsetting capital gains by selling assets currently at a loss.")
 
     if active_tool == "🧾 Tax-Loss Harvesting Simulator" and 'run_tlh' in locals() and run_tlh and len(holdings) > 0:
         with st.spinner("Fetching current prices..."):
-            holdings_with_prices = []
+            all_holdings_with_prices = []
             for h in holdings:
                 cp = fetch_current_price(h["ticker"])
                 if cp is None:
@@ -353,12 +410,11 @@ with tab2:
                 h_new["current_price"] = cp
                 h_new["unrealized_pl"] = unrealized_pl
                 h_new["status"] = status
-                holdings_with_prices.append(h_new)
+                all_holdings_with_prices.append(h_new)
 
-        if len(holdings_with_prices) > 0:
+        if len(all_holdings_with_prices) > 0:
             st.subheader("Your Holdings Summary")
-            summary_df = pd.DataFrame(holdings_with_prices)
-            # Reorder and format columns
+            summary_df = pd.DataFrame(all_holdings_with_prices)
             summary_df = summary_df[["ticker", "basis", "current_price", "shares", "unrealized_pl", "status"]]
             summary_df.columns = ["Ticker", "Purchase Price", "Current Price", "Shares", "Unrealized P&L", "Status"]
             
@@ -368,109 +424,121 @@ with tab2:
                 "Unrealized P&L": "${:,.2f}"
             }))
 
-            pairings, loss_assets, gain_assets = analyze_pairings(holdings_with_prices, federal_marginal, ltcg_rate, state_rate, niit_rate)
+            gain_only_holdings = [h for h in all_holdings_with_prices if h["unrealized_pl"] > 0]
+            loss_holdings = [h for h in all_holdings_with_prices if h["unrealized_pl"] < 0]
 
-            if not loss_assets:
-                st.warning("None of your holdings are currently at a loss. There are no tax-loss harvesting opportunities.")
-            elif not gain_assets:
-                st.info("None of your holdings are currently at a gain. No capital gains tax to offset.")
-            elif not pairings:
-                st.info("No valid pairings found.")
-            else:
-                st.subheader("🏆 Optimal Pairing Rankings")
-                rankings_data = []
-                for idx, p in enumerate(pairings):
-                    rankings_data.append({
-                        "Rank": idx + 1,
-                        "Sell at Loss": p["loss_ticker"],
-                        "Sell at Gain": p["gain_ticker"],
-                        "Realized Loss": p["realized_loss"],
-                        "Realized Gain": p["realized_gain"],
-                        "Net Taxable": p["net_taxable"],
-                        "Tax Without Harvesting": p["tax_without"],
-                        "Tax With Harvesting": p["tax_with"],
-                        "💰 Savings": p["savings"]
-                    })
-                
-                rankings_df = pd.DataFrame(rankings_data)
-                st.dataframe(rankings_df.style.format({
-                    "Realized Loss": "${:,.2f}",
-                    "Realized Gain": "${:,.2f}",
-                    "Net Taxable": "${:,.2f}",
-                    "Tax Without Harvesting": "${:,.2f}",
-                    "Tax With Harvesting": "${:,.2f}",
-                    "💰 Savings": "${:,.2f}"
-                }))
+            if not gain_only_holdings:
+                st.info("None of your holdings are currently at a gain. No capital gains tax to analyze.")
+            elif not loss_holdings:
+                st.info("None of your holdings are at a loss. No harvesting opportunity — both scenarios produce identical results.")
 
-                best_pairing = pairings[0]
-                
-                st.subheader("📋 Detailed Breakdown — Best Pairing")
-                breakdown_data = {
-                    "Line Item": [
-                        "Realized Gain", "Realized Loss", "Net Taxable Gain", 
-                        "Federal Rate Applied", "State Rate Applied", "NIIT Rate Applied", "Combined Rate", 
-                        "Estimated Tax (Without Harvesting)", "Estimated Tax (With Harvesting)", "💰 Tax Savings"
-                    ],
-                    "Without Harvesting": [
-                        f"${best_pairing['realized_gain']:,.2f}", "—", f"${best_pairing['realized_gain']:,.2f}",
-                        f"{(best_pairing['combined_rate']*100 - state_rate - niit_rate):.1f}%", f"{state_rate:.1f}%", f"{niit_rate:.1f}%", f"{best_pairing['combined_rate']*100:.1f}%",
-                        f"${best_pairing['tax_without']:,.2f}", "—", "—"
-                    ],
-                    "With Harvesting": [
-                        f"${best_pairing['realized_gain']:,.2f}", f"${best_pairing['realized_loss']:,.2f}", f"${best_pairing['net_taxable']:,.2f}",
-                        f"{(best_pairing['combined_rate']*100 - state_rate - niit_rate):.1f}%", f"{state_rate:.1f}%", f"{niit_rate:.1f}%", f"{best_pairing['combined_rate']*100:.1f}%",
-                        "—", f"${best_pairing['tax_with']:,.2f}", f"${best_pairing['savings']:,.2f}"
-                    ]
-                }
-                st.table(pd.DataFrame(breakdown_data).set_index("Line Item"))
+            # Compute Scenarios
+            scenario_a = compute_portfolio_tax(gain_only_holdings, federal_marginal, ltcg_rate, state_rate, niit_rate)
+            scenario_b = compute_portfolio_tax(all_holdings_with_prices, federal_marginal, ltcg_rate, state_rate, niit_rate)
 
-                m1, m2, m3 = st.columns(3)
-                eff_rate_reduction = 0.0
-                if best_pairing['realized_gain'] > 0:
-                    eff_rate_reduction = (best_pairing['tax_without'] / best_pairing['realized_gain']) - (best_pairing['tax_with'] / best_pairing['realized_gain'])
-                
-                best_loss_h = next(h for h in holdings_with_prices if h["ticker"] == best_pairing["loss_ticker"])
-                best_gain_h = next(h for h in holdings_with_prices if h["ticker"] == best_pairing["gain_ticker"])
-                
-                total_proceeds = (best_loss_h["current_price"] * best_loss_h["shares"]) + (best_gain_h["current_price"] * best_gain_h["shares"]) - best_pairing['tax_with']
+            st.subheader("📊 IRS Netting Waterfall")
+            
+            waterfall_data = {
+                "Row Label": [
+                    "Short-Term Gains",
+                    "Short-Term Losses",
+                    "Net Short-Term",
+                    "Long-Term Gains",
+                    "Long-Term Losses",
+                    "Net Long-Term",
+                    "Overall Net Gain/(Loss)",
+                    "Tax on Short-Term",
+                    "Tax on Long-Term",
+                    "Total Capital Gains Tax",
+                    "$3,000 Ordinary Income Deduction",
+                    "Tax Benefit of Deduction",
+                    "Loss Carryforward to Future Years"
+                ],
+                "Sell Gains Only": [
+                    f"${scenario_a['st_gains']:,.2f}",
+                    f"${scenario_a['st_losses']:,.2f}",
+                    f"${scenario_a['net_st']:,.2f}",
+                    f"${scenario_a['lt_gains']:,.2f}",
+                    f"${scenario_a['lt_losses']:,.2f}",
+                    f"${scenario_a['net_lt']:,.2f}",
+                    f"${scenario_a['overall_net']:,.2f}",
+                    f"${scenario_a['tax_on_st']:,.2f}",
+                    f"${scenario_a['tax_on_lt']:,.2f}",
+                    f"${scenario_a['total_tax']:,.2f}",
+                    f"${scenario_a['ordinary_income_deduction']:,.2f}",
+                    f"${scenario_a['ordinary_income_tax_benefit']:,.2f}",
+                    f"${scenario_a['carryforward']:,.2f}"
+                ],
+                "Sell All (Harvest Losses)": [
+                    f"${scenario_b['st_gains']:,.2f}",
+                    f"${scenario_b['st_losses']:,.2f}",
+                    f"${scenario_b['net_st']:,.2f}",
+                    f"${scenario_b['lt_gains']:,.2f}",
+                    f"${scenario_b['lt_losses']:,.2f}",
+                    f"${scenario_b['net_lt']:,.2f}",
+                    f"${scenario_b['overall_net']:,.2f}",
+                    f"${scenario_b['tax_on_st']:,.2f}",
+                    f"${scenario_b['tax_on_lt']:,.2f}",
+                    f"${scenario_b['total_tax']:,.2f}",
+                    f"${scenario_b['ordinary_income_deduction']:,.2f}",
+                    f"${scenario_b['ordinary_income_tax_benefit']:,.2f}",
+                    f"${scenario_b['carryforward']:,.2f}"
+                ]
+            }
+            st.table(pd.DataFrame(waterfall_data).set_index("Row Label"))
 
-                m1.metric("💰 Maximum Tax Savings", f"${best_pairing['savings']:,.2f}")
-                m2.metric("📉 Effective Rate Reduction", f"{eff_rate_reduction*100:.1f} pts")
-                m3.metric("📊 Total Proceeds After Tax", f"${total_proceeds:,.2f}")
+            m1, m2, m3 = st.columns(3)
+            
+            total_savings = (scenario_a["total_tax"] - scenario_b["total_tax"]) + scenario_b["ordinary_income_tax_benefit"]
 
-                st.subheader("Tax Impact Comparison — Top Pairings")
-                
-                top_3 = pairings[:3]
-                labels = [f"{p['loss_ticker']} → {p['gain_ticker']}" for p in top_3]
-                tax_without = [p["tax_without"] for p in top_3]
-                tax_with = [p["tax_with"] for p in top_3]
+            total_gains_a = scenario_a["st_gains"] + scenario_a["lt_gains"]
+            eff_rate_a = (scenario_a["total_tax"] / total_gains_a * 100) if total_gains_a > 0 else 0.0
+            
+            total_gains_b = scenario_b["st_gains"] + scenario_b["lt_gains"]
+            eff_rate_b = (scenario_b["total_tax"] / total_gains_b * 100) if total_gains_b > 0 else 0.0
 
-                x = np.arange(len(labels))
-                width = 0.35
+            total_sale_proceeds = sum(h["current_price"] * h["shares"] for h in all_holdings_with_prices)
+            net_cash = total_sale_proceeds - scenario_b["total_tax"]
 
-                fig, ax = plt.subplots(figsize=(8, 5))
-                rects1 = ax.bar(x - width/2, tax_without, width, label='Without Harvesting', color='indianred')
-                rects2 = ax.bar(x + width/2, tax_with, width, label='With Harvesting', color='mediumseagreen')
+            m1.metric("💰 Total Tax Savings", f"${total_savings:,.2f}")
+            m2.metric("📉 Effective Tax Rate", f"{eff_rate_a:.1f}%", f"{eff_rate_b - eff_rate_a:.1f}% vs Gains Only", delta_color="inverse")
+            m3.metric("📊 Net Cash After Tax", f"${net_cash:,.2f}")
 
-                ax.set_ylabel('Tax ($)')
-                ax.set_title('Tax Owed: Without vs. With Harvesting')
-                ax.set_xticks(x)
-                ax.set_xticklabels(labels)
-                ax.legend()
+            if scenario_b["carryforward"] > 0:
+                st.info(f"📋 You have **${scenario_b['carryforward']:,.2f}** in capital losses that exceed your gains plus the $3,000 deduction. This amount carries forward to offset capital gains in future tax years.")
 
-                def autolabel(rects):
-                    for rect in rects:
-                        height = rect.get_height()
-                        ax.annotate(f'${height:,.0f}',
-                                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                                    xytext=(0, 3),  
-                                    textcoords="offset points",
-                                    ha='center', va='bottom')
+            st.subheader("Tax Impact Comparison")
+            
+            labels = ["Total Tax"]
+            tax_a = [scenario_a["total_tax"]]
+            tax_b = [scenario_b["total_tax"]]
 
-                autolabel(rects1)
-                autolabel(rects2)
+            x = np.arange(len(labels))
+            width = 0.35
 
-                st.pyplot(fig)
+            fig, ax = plt.subplots(figsize=(8, 5))
+            rects1 = ax.bar(x - width/2, tax_a, width, label='Sell Gains Only', color='indianred')
+            rects2 = ax.bar(x + width/2, tax_b, width, label='Sell All + Harvest', color='mediumseagreen')
+
+            ax.set_ylabel('Total Capital Gains Tax ($)')
+            ax.set_title('Total Tax: Gains Only vs. With Harvesting')
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels)
+            ax.legend()
+
+            def autolabel(rects):
+                for rect in rects:
+                    height = rect.get_height()
+                    ax.annotate(f'${height:,.0f}',
+                                xy=(rect.get_x() + rect.get_width() / 2, height),
+                                xytext=(0, 3),  
+                                textcoords="offset points",
+                                ha='center', va='bottom')
+
+            autolabel(rects1)
+            autolabel(rects2)
+
+            st.pyplot(fig)
 
     with st.expander("⚠️ Important Disclaimer"):
         st.write("""

@@ -16,7 +16,7 @@ When you launch the app, you will see a radio button in the left sidebar labeled
 
 ## 2. Holdings (Batch Mode)
 
-"Batch Mode" is a powerful feature that allows you to input *all* the assets you are considering selling, regardless of whether they are currently up (gains) or down (losses). The tool will automatically fetch live prices and rank every possible "loss vs. gain" pairing to find you the most tax-efficient move.
+"Batch Mode" is a powerful feature that allows you to input *all* the assets you are considering selling, regardless of whether they are currently up (gains) or down (losses). The tool will automatically fetch live prices and aggregate your portfolio to simulate the exact math the IRS will use when you file your Schedule D.
 
 ### How to use Batch Mode:
 1. **Enter Your First Holding**: Type the ticker symbol (e.g., `AAPL`), your original purchase price per share, and how many shares you own.
@@ -29,7 +29,7 @@ When you launch the app, you will see a radio button in the left sidebar labeled
 
 > [!TIP]
 > **Batch Mode Strategy**
-> Don't just enter one loss and one gain. Enter 3-4 assets you want to sell at a loss, and 3-4 assets you want to sell at a gain. The simulator will do the heavy math of pairing them up to show you exactly which combination saves you the most money.
+> Don't just enter one loss and one gain. Enter the entire batch of assets you are considering selling. The simulator will correctly aggregate all short-term and long-term results to show you exactly how the losses offset the gains across your whole portfolio.
 
 ---
 
@@ -38,7 +38,7 @@ When you launch the app, you will see a radio button in the left sidebar labeled
 To get accurate estimates, you need to tell the simulator your tax situation.
 
 ### Marginal Federal Tax Bracket (%)
-This applies primarily to **short-term capital gains**, which are taxed as ordinary income. 
+This applies primarily to **short-term capital gains**, which are taxed as ordinary income, and dictates the value of the $3,000 ordinary income deduction.
 
 **Examples based on 2024 Single Filer brackets:**
 - **12%**: If your total taxable income is ~$11,600 to ~$47,150 (e.g., earning $45,000/year).
@@ -68,24 +68,25 @@ The Net Investment Income Tax (NIIT) is an extra 3.8% surcharge applied to inves
 
 ## 4. Running the Analysis & Interpreting Results
 
-Once your holdings and tax brackets are set, click the **🔍 Analyze All Pairings** button.
+Once your holdings and tax brackets are set, click the **🔍 Analyze Tax Impact** button.
 
 ### 📊 Your Holdings Summary
 The tool will fetch live prices from Yahoo Finance and show you a dashboard of your entered assets. You can quickly see which assets are currently at a **📈 GAIN** and which are at a **📉 LOSS**.
 
-### 🏆 Optimal Pairing Rankings
-If you entered multiple gains and losses, this table is the magic of Batch Mode. It pairs every single loss asset against every single gain asset and sorts them by **💰 Savings**.
-- **Rank 1** is the pairing that yields the highest absolute dollar tax savings.
+### 📊 IRS Netting Waterfall
+This is the core of the simulator. It mimics the math of the IRS Schedule D form by comparing two scenarios side-by-side:
+- **Sell Gains Only**: What you would owe in taxes if you *only* sold the profitable assets in your list.
+- **Sell All (Harvest Losses)**: What you owe if you sell *all* the assets you entered (the profitable ones *and* the losing ones together).
 
-### 📋 Detailed Breakdown
-This section focuses entirely on the #1 ranked pairing. It shows you a side-by-side comparison:
-- **Without Harvesting**: What you would owe in taxes if you *only* sold the profitable asset.
-- **With Harvesting**: What you owe if you sell *both* the profitable asset and the losing asset together.
+The waterfall tracks exactly how your short-term and long-term gains/losses offset each other, arriving at the **Total Capital Gains Tax**. It also calculates the **$3,000 Ordinary Income Deduction** if your losses exceed your gains.
 
 ### 💡 Key Metrics
-- **💰 Maximum Tax Savings**: The exact dollar amount you are keeping out of the IRS's hands by selling the losing asset.
-- **📉 Effective Rate Reduction**: How much your overall tax percentage dropped on the sale.
-- **📊 Total Proceeds After Tax**: The total cash you will walk away with (Sale of Gain Asset + Sale of Loss Asset - Taxes Owed).
+- **💰 Total Tax Savings**: The exact dollar amount you are keeping out of the IRS's hands by selling the losing assets alongside the winning ones (including the benefit of the ordinary income deduction).
+- **📉 Effective Tax Rate**: How much your overall capital gains tax percentage drops when you harvest the losses.
+- **📊 Net Cash After Tax**: The total cash you will walk away with if you execute the "Sell All" scenario (Total Sale Proceeds - Taxes Owed).
+
+### 📋 Carryforward Note
+If your total capital losses are larger than your capital gains *plus* the $3,000 maximum IRS deduction, the simulator will display a special note. This remaining amount is your **Loss Carryforward**, which you can use to offset capital gains in future tax years!
 
 ---
 
