@@ -348,32 +348,86 @@ with tab2:
     if active_tool == "🧾 Tax-Loss Harvesting Simulator":
         st.sidebar.header("1. Holdings (Batch Mode)")
         
+        input_method = st.sidebar.radio("Input Method", ["Manual Entry", "CSV Upload"])
+        
         holdings = []
-        for i in range(st.session_state["tlh_holdings_count"]):
-            st.sidebar.markdown(f"**Holding {i+1}**")
-            ticker = st.sidebar.text_input("Ticker", key=f"tlh_ticker_{i}", value="PFE" if i == 0 else ("NVDA" if i==1 else ""))
-            basis = st.sidebar.number_input("Purchase Price/Share", min_value=0.01, value=50.0 if i==0 else 200.0, key=f"tlh_basis_{i}")
-            shares = st.sidebar.number_input("Shares", min_value=1.0, step=1.0, value=100.0 if i==0 else 50.0, key=f"tlh_shares_{i}")
-            holding = st.sidebar.selectbox("Holding Period", ["< 1 Year (Short-Term)", "≥ 1 Year (Long-Term)"], key=f"tlh_holding_{i}")
-            st.sidebar.divider()
+        if input_method == "CSV Upload":
+            csv_file = st.sidebar.file_uploader("Upload Holdings CSV", type=["csv"])
             
-            if ticker:
-                holdings.append({
-                    "ticker": ticker.strip().upper(),
-                    "basis": basis,
-                    "shares": shares,
-                    "holding": holding
-                })
+            st.sidebar.caption("Required format:")
+            st.sidebar.code("ticker,purchase_price,shares,holding_period\nAAPL,150.00,100,long\nPFE,50.00,200,short")
+            
+            csv_template = "ticker,purchase_price,shares,holding_period\nAAPL,150.00,100,long\nPFE,50.00,200,short"
+            st.sidebar.download_button(
+                label="📋 Download Template",
+                data=csv_template,
+                file_name="tlh_template.csv",
+                mime="text/csv"
+            )
+            
+            if csv_file is not None:
+                try:
+                    df = pd.read_csv(csv_file)
+                    df.columns = df.columns.str.strip().str.lower()
+                    required_columns = ["ticker", "purchase_price", "shares", "holding_period"]
+                    if not all(col in df.columns for col in required_columns):
+                        st.sidebar.error(f"Missing required columns. Expected: {', '.join(required_columns)}")
+                    else:
+                        invalid_rows = []
+                        for index, row in df.iterrows():
+                            ticker = str(row['ticker']).strip().upper()
+                            purchase_price = pd.to_numeric(row['purchase_price'], errors='coerce')
+                            shares = pd.to_numeric(row['shares'], errors='coerce')
+                            holding_period = str(row['holding_period']).strip().lower()
+                            
+                            if not ticker or ticker == 'NAN' or pd.isna(purchase_price) or purchase_price <= 0 or pd.isna(shares) or shares <= 0 or holding_period not in ['short', 'long']:
+                                invalid_rows.append(index + 2) # +2 for 1-based indexing and header
+                                continue
+                                
+                            holding = "< 1 Year (Short-Term)" if holding_period == 'short' else "≥ 1 Year (Long-Term)"
+                            
+                            holdings.append({
+                                "ticker": ticker,
+                                "basis": float(purchase_price),
+                                "shares": float(shares),
+                                "holding": holding
+                            })
+                            
+                        if invalid_rows:
+                            st.sidebar.warning(f"Skipped {len(invalid_rows)} invalid rows (rows: {', '.join(map(str, invalid_rows[:5]))}{'...' if len(invalid_rows) > 5 else ''})")
+                            
+                        if holdings:
+                            st.sidebar.success(f"Loaded {len(holdings)} valid holdings from CSV.")
+                            st.sidebar.dataframe(pd.DataFrame(holdings))
+                except Exception as e:
+                    st.sidebar.error(f"Error parsing CSV: {e}")
 
-        col1, col2 = st.sidebar.columns(2)
-        with col1:
-            if st.button("➕ Add Holding", key="tlh_add"):
-                st.session_state["tlh_holdings_count"] += 1
-                st.rerun()
-        with col2:
-            if st.button("🗑️ Remove Last", key="tlh_rem") and st.session_state["tlh_holdings_count"] > 1:
-                st.session_state["tlh_holdings_count"] -= 1
-                st.rerun()
+        elif input_method == "Manual Entry":
+            for i in range(st.session_state["tlh_holdings_count"]):
+                st.sidebar.markdown(f"**Holding {i+1}**")
+                ticker = st.sidebar.text_input("Ticker", key=f"tlh_ticker_{i}", value="PFE" if i == 0 else ("NVDA" if i==1 else ""))
+                basis = st.sidebar.number_input("Purchase Price/Share", min_value=0.01, value=50.0 if i==0 else 200.0, key=f"tlh_basis_{i}")
+                shares = st.sidebar.number_input("Shares", min_value=1.0, step=1.0, value=100.0 if i==0 else 50.0, key=f"tlh_shares_{i}")
+                holding = st.sidebar.selectbox("Holding Period", ["< 1 Year (Short-Term)", "≥ 1 Year (Long-Term)"], key=f"tlh_holding_{i}")
+                st.sidebar.divider()
+                
+                if ticker:
+                    holdings.append({
+                        "ticker": ticker.strip().upper(),
+                        "basis": basis,
+                        "shares": shares,
+                        "holding": holding
+                    })
+    
+            col1, col2 = st.sidebar.columns(2)
+            with col1:
+                if st.button("➕ Add Holding", key="tlh_add"):
+                    st.session_state["tlh_holdings_count"] += 1
+                    st.rerun()
+            with col2:
+                if st.button("🗑️ Remove Last", key="tlh_rem") and st.session_state["tlh_holdings_count"] > 1:
+                    st.session_state["tlh_holdings_count"] -= 1
+                    st.rerun()
 
         st.sidebar.header("2. Tax Configuration")
         federal_marginal = st.sidebar.number_input("Marginal Federal Tax Bracket (%)", value=24.0, key="tlh_marginal")

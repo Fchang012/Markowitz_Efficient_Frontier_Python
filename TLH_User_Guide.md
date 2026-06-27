@@ -18,7 +18,11 @@ When you launch the app, you will see a radio button in the left sidebar labeled
 
 "Batch Mode" is a powerful feature that allows you to input *all* the assets you are considering selling, regardless of whether they are currently up (gains) or down (losses). The tool will automatically fetch live prices and aggregate your portfolio to simulate the exact math the IRS will use when you file your Schedule D.
 
-### How to use Batch Mode:
+### Choose Your Input Method
+
+You can enter your holdings using either **Manual Entry** or **CSV Upload**.
+
+#### Method A: Manual Entry
 1. **Enter Your First Holding**: Type the ticker symbol (e.g., `AAPL`), your original purchase price per share, and how many shares you own.
 2. **Select Holding Period**: 
    - **< 1 Year (Short-Term)**: You bought this asset less than 365 days ago.
@@ -26,6 +30,15 @@ When you launch the app, you will see a radio button in the left sidebar labeled
    *(Note: This is critical, as short-term gains are taxed at much higher rates than long-term gains).*
 3. **Add More Holdings**: Click the **➕ Add Holding** button in the sidebar. You can add as many holdings as you want! Put in your biggest losers and your biggest winners.
 4. **Remove Holdings**: Click **🗑️ Remove Last** if you added too many blank fields.
+
+#### Method B: CSV Upload
+If you have many holdings, you can upload them all at once using a CSV file.
+1. Select **CSV Upload** under the Input Method toggle.
+2. Click **📋 Download Template** to download an example CSV file formatted correctly.
+3. Edit the template with your own holdings using Excel or any spreadsheet tool. Save as `.csv`.
+   - The required columns are: `ticker,purchase_price,shares,holding_period`.
+   - Ensure the `holding_period` is either `short` or `long`.
+4. Upload your saved `.csv` file. The sidebar will immediately show you the loaded valid holdings.
 
 > [!TIP]
 > **Batch Mode Strategy**
