@@ -963,6 +963,11 @@ if active_tool == "🏠 Home Equity Calculator":
     
     # CSV Export matching Total Portfolio Calculator expected format
     csv_buffer = io.StringIO()
+    csv_buffer.write(f'Total Cost,"${tc:,.2f}"\n')
+    csv_buffer.write(f'Down Payment,"${dp:,.2f}"\n')
+    csv_buffer.write(f'Current Principal Balance,"${cpb:,.2f}"\n')
+    csv_buffer.write(f'Theoretical Home Equity Redfin,"${redfin:,.2f}"\n')
+    csv_buffer.write("\n")
     export_df = pd.DataFrame([{
         "ticker": "HOME",
         "shares": redfin_equity,
