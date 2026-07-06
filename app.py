@@ -213,7 +213,8 @@ def compute_portfolio_tax(holdings, federal_marginal, ltcg_rate, state_rate, nii
 active_tool = st.sidebar.radio("Active Tool", [
     "💼 Total Portfolio Calculator",
     "🧾 Tax-Loss Harvesting Simulator",
-    "📈 Portfolio Optimizer"
+    "📈 Portfolio Optimizer",
+    "🏠 Home Equity Calculator"
 ])
 st.sidebar.markdown("---")
 
@@ -867,3 +868,112 @@ if active_tool == "📈 Portfolio Optimizer" and 'run_analysis' in locals() and 
             st.error(f"Mathematical Optimization Error: {e}")
             st.info("This usually happens if constraints are too strict (e.g., forcing a high minimum weight on perfectly correlated assets). Try lowering your minimum allocation.")
 
+# --- TOOL 4: HOME EQUITY CALCULATOR ---
+if active_tool == "🏠 Home Equity Calculator":
+    st.header("🏠 Home Equity Calculator")
+    st.write("Model your house as an asset and export it in a format compatible with the Total Portfolio Calculator.")
+    
+    st.sidebar.header("House Inputs")
+    
+    # Session state for inputs so they persist
+    if "he_total_cost" not in st.session_state:
+        st.session_state["he_total_cost"] = 0.0
+    if "he_down_payment" not in st.session_state:
+        st.session_state["he_down_payment"] = 0.0
+    if "he_principal_balance" not in st.session_state:
+        st.session_state["he_principal_balance"] = 0.0
+    if "he_redfin_equity" not in st.session_state:
+        st.session_state["he_redfin_equity"] = 0.0
+        
+    st.session_state["he_total_cost"] = st.sidebar.number_input(
+        "Total Cost of House With All Closing Costs, Fees, and Taxes", 
+        min_value=0.0, step=1000.0, format="%.2f",
+        value=st.session_state["he_total_cost"]
+    )
+    
+    st.session_state["he_down_payment"] = st.sidebar.number_input(
+        "Down Payment", 
+        min_value=0.0, step=1000.0, format="%.2f",
+        value=st.session_state["he_down_payment"]
+    )
+    
+    st.session_state["he_principal_balance"] = st.sidebar.number_input(
+        "Current Principal Balance", 
+        min_value=0.0, step=1000.0, format="%.2f",
+        value=st.session_state["he_principal_balance"]
+    )
+    
+    st.session_state["he_redfin_equity"] = st.sidebar.number_input(
+        "Theoretical Home Equity Redfin", 
+        min_value=0.0, step=1000.0, format="%.2f",
+        value=st.session_state["he_redfin_equity"]
+    )
+    
+    run_he = st.sidebar.button("Calculate", key="he_run")
+    
+    tc = st.session_state["he_total_cost"]
+    dp = st.session_state["he_down_payment"]
+    cpb = st.session_state["he_principal_balance"]
+    redfin = st.session_state["he_redfin_equity"]
+    
+    # Computations
+    principal_paid = tc - cpb
+    total_equity_paid = dp + principal_paid
+    redfin_equity = redfin - cpb
+    
+    ltv_ratio = (cpb / redfin * 100) if redfin > 0 else 0.0
+    appreciation = redfin - tc
+    
+    st.subheader("Overview")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Principal Paid", f"${principal_paid:,.2f}")
+    m2.metric("Redfin Equity", f"${redfin_equity:,.2f}")
+    m3.metric("LTV Ratio", f"{ltv_ratio:.2f}%")
+    
+    st.subheader("Detail Breakdown")
+    detail_data = {
+        "Metric": [
+            "Total Cost (Inc. Fees)",
+            "Down Payment",
+            "Current Principal Balance",
+            "Redfin Value (Theoretical)",
+            "Principal Paid (Total Cost - Current Principal Balance)",
+            "Total Equity (Paid) (Down Payment + Principal Paid)",
+            "Redfin Equity (Redfin Value - Current Principal Balance)",
+            "Appreciation (Redfin Value - Total Cost)",
+            "LTV Ratio (Current Principal Balance / Redfin Value)"
+        ],
+        "Amount": [
+            f"${tc:,.2f}",
+            f"${dp:,.2f}",
+            f"${cpb:,.2f}",
+            f"${redfin:,.2f}",
+            f"${principal_paid:,.2f}",
+            f"${total_equity_paid:,.2f}",
+            f"${redfin_equity:,.2f}",
+            f"${appreciation:,.2f}",
+            f"{ltv_ratio:.2f}%"
+        ]
+    }
+    df_detail = pd.DataFrame(detail_data)
+    st.table(df_detail)
+    
+    st.subheader("Export for Total Portfolio Calculator")
+    st.write("Download this CSV to include your home equity as an asset in the Total Portfolio Calculator.")
+    
+    # CSV Export matching Total Portfolio Calculator expected format
+    csv_buffer = io.StringIO()
+    export_df = pd.DataFrame([{
+        "ticker": "HOME",
+        "shares": redfin_equity,
+        "institution": "Home Equity (Redfin)"
+    }])
+    export_df.to_csv(csv_buffer, index=False)
+    csv_export = csv_buffer.getvalue()
+    
+    st.download_button(
+        label="📥 Download House Equity CSV",
+        data=csv_export,
+        file_name=f"house_equity_{date.today().isoformat()}.csv",
+        mime="text/csv"
+    )
